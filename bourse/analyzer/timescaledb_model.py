@@ -196,6 +196,23 @@ class TimescaleStockMarketModel:
 
     # write here your methods which SQL requests
 
+    def insert_company(self, name, mid=None, symbol=None, symbol_nf=None, isin=None, reuters=None, boursorama=None, pea=None, sector=None):
+        '''Insert a company in the database
+
+        :param name: name of the company
+        :param mid: market id
+        :param symbol: symbol of the company
+        :param symbol_nf: symbol of the company in netfonds
+        :param isin: isin of the company
+        :param reuters: reuters code of the company
+        :param boursorama: boursorama code of the company
+        :param pea: True if the company is in PEA
+        :param sector: sector of the company
+        '''
+        self.raw_query('INSERT INTO companies (name, mid, symbol, symbol_nf, isin, reuters, boursorama, pea, sector) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                       (name, mid, symbol, symbol_nf, isin, reuters, boursorama, pea, sector))
+        self.commit()
+
     def search_company_id(self, name, getmax=1, strict=False):
         '''
         Try to find the id of a company in our database.
