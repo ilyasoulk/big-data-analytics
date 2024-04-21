@@ -1,7 +1,6 @@
 import pandas as pd
 import requests
 import numpy as np
-import sklearn
 import tarfile
 import os
 import dateutil
@@ -9,6 +8,10 @@ import glob
 import gc
 
 import timescaledb_model as tsdb
+
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 db = tsdb.TimescaleStockMarketModel('bourse', 'ricou', 'db', 'monmdp')  # inside docker
 
@@ -24,6 +27,35 @@ def store_file(name, website):
             df = pd.read_pickle("bourse/data/boursorama/" + year + "/" + name)
         # to be finished
 
+
+
+def load_pickle(file,market):
+    key = dateutil.parser.parse((file.split(market)[1].split('.'))[0])
+    df = pd.read_pickle(file)
+    return key, df
+
+
+def create_super_data_frame_threading(market):
+    files_2019 = glob.glob('./boursorama/' + '2019/' + market + '*')
+    files_2020 = glob.glob('./boursorama/' + '2020/' + market + '*')
+    files_2021 = glob.glob('./boursorama/' + '2021/' + market + '*')
+    files_2022 = glob.glob('./boursorama/' + '2022/' + market + '*')
+    files_2023 = glob.glob('./boursorama/' + '2023/' + market + '*')
+    files = files_2019 + files_2020 + files_2021 + files_2022 + files_2023
+    
+    print(f"Found {len(files)} files for {market}")
+
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        futures = [executor.submit(load_pickle, file, market) for file in tqdm(files)]
+
+        results = []
+        for future in tqdm(as_completed(futures)):
+          results.append(future.result())
+
+    market_df = pd.concat({key: df for key, df in results})
+    del results
+    del futures
+    return market_df
 
 def create_super_data_frame(market):
     files_2019 = glob.glob('/home/bourse/data/boursorama/' + '2019/' + market + '*')
@@ -88,8 +120,6 @@ def to_stock_format(df, symbols):
   return df[['date', 'cid', 'value', 'volume']]
 
 if __name__ == '__main__':
-    # store_file("compA 2020-01-01 09:02:02.532411", "boursorama")
-    # store_file("compB 2020-01-01 09:02:02.532411", "boursorama")
     path = "/home/bourse/data/boursorama.tar"
     if os.path.exists(path):
         print("File already exists")
@@ -111,7 +141,8 @@ if __name__ == '__main__':
 
     print("Creating super data frame")
     markets = ["peapme"]
-    all_df = [create_super_data_frame(market) for market in markets]
+    #all_df = [create_super_data_frame(market) for market in markets]
+    all_df = [create_super_data_frame_threading(market) for market in markets]
 
     print("Renaming companies")
     renamed_df = [rename_companies(df) for df in all_df]
