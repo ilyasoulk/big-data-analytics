@@ -6,6 +6,7 @@ import tarfile
 import os
 import dateutil
 import glob
+import gc
 
 import timescaledb_model as tsdb
 
@@ -109,7 +110,7 @@ if __name__ == '__main__':
         tar.close()
 
     print("Creating super data frame")
-    markets = ["peapme", "compA", "compB", "amsterdam"]
+    markets = ["peapme"]
     all_df = [create_super_data_frame(market) for market in markets]
 
     print("Renaming companies")
@@ -124,14 +125,20 @@ if __name__ == '__main__':
 
     print("Creating stocks data frame")
     symbols = companies_df['symbol'].values # to get cid
-    stocks_df = pd.concat([to_stock_format(df, symbols) for df in renamed_df])
+    del companies_df
+    gc.collect()
 
+    stocks_df = pd.concat([to_stock_format(df, symbols) for df in renamed_df])
     print("Inserting stocks on db")
     db.df_write(df=stocks_df, table='stocks', index=False)
+    del stocks_df
+    gc.collect()
 
     
     print("Creating day stocks data frame")
     day_stocks_df = pd.concat([day_stock(df, symbols) for df in renamed_df])
+    del renamed_df
+    gc.collect()
 
     print("Inserting daystocks on db")
     db.df_write(df=day_stocks_df, table='daystocks', index=False)
