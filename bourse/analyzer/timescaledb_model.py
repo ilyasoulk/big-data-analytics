@@ -118,6 +118,7 @@ class TimescaleStockMarketModel:
             cursor.execute("INSERT INTO markets (id, name, alias) VALUES (8,'Paris compartiment B','compB');")
             cursor.execute("INSERT INTO markets (id, name, alias) VALUES (9,'Bourse Allemande','xetra');")
             cursor.execute("INSERT INTO markets (id, name, alias) VALUES (10,'Bruxelle','bruxelle');")
+            cursor.execute("INSERT INTO markets (id, name, alias) VALUES (11,'Paris','paris');")
         except Exception as e:
             self.logger.exception('SQL error: %s' % e)
         self.__connection.commit()
@@ -215,6 +216,7 @@ class TimescaleStockMarketModel:
         0
         '''
         if getmax > 1:
+            print('toto')
             res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(name) LIKE LOWER(%s)',
                                  ('%' + name + '%',))
         else:
