@@ -13,29 +13,34 @@ import timescaledb_model as tsdb
 db = tsdb.TimescaleStockMarketModel('bourse', 'ricou', 'db', 'monmdp')  # inside docker
 
 
-def store_file(name, website):
-    if db.is_file_done(name):
-        return
-    if website.lower() == "boursorama":
-        try:
-            df = pd.read_pickle("bourse/data/boursorama/" + name)  # is this dir ok for you ?
-        except:
-            year = name.split()[1].split("-")[0]
-            df = pd.read_pickle("bourse/data/boursorama/" + year + "/" + name)
-        # to be finished
+# def store_file(name, website):
+#     if db.is_file_done(name):
+#         return
+#     if website.lower() == "boursorama":
+#         try:
+#             df = pd.read_pickle("bourse/data/boursorama/" + name)  # is this dir ok for you ?
+#         except:
+#             year = name.split()[1].split("-")[0]
+#             df = pd.read_pickle("bourse/data/boursorama/" + year + "/" + name)
+#         # to be finished
 
 
 def create_super_data_frame(market):
-    files_2019 = glob.glob('/home/bourse/data/boursorama/' + '2019/' + market + '*')
-    files_2020 = glob.glob('/home/bourse/data/boursorama/' + '2020/' + market + '*')
-    files_2021 = glob.glob('/home/bourse/data/boursorama/' + '2021/' + market + '*')
-    files_2022 = glob.glob('/home/bourse/data/boursorama/' + '2022/' + market + '*')
-    files_2023 = glob.glob('/home/bourse/data/boursorama/' + '2023/' + market + '*')
-    files = files_2019 + files_2020 + files_2021 + files_2022 + files_2023
-    print(f"Found {len(files)} files for {market}")
-    market_df = pd.concat({dateutil.parser.parse((f.split(market)[1].split('.'))[0]): pd.read_pickle(f) for f in files})
+    years = ['2019', '2020', '2021', '2022', '2023']
+    files = [glob.glob(f'/home/bourse/data/boursorama/{year}/{market}*') for year in years]
+    all_files = [item for sublist in files for item in sublist]  # Flatten the list
+
+    market_df = pd.DataFrame()
+    for file in all_files:
+        temp_df = pd.read_pickle(file)
+        temp_df['volume'] = temp_df['volume'].astype('int32')
+        market_df = pd.concat([market_df, temp_df])
+        del temp_df
+        gc.collect()
+
     market_df.sort_index(inplace=True)
     return market_df
+
 
 def is_pea(company_symbol, pea_symbols):
     return company_symbol in pea_symbols
@@ -64,9 +69,10 @@ def create_companies_df(renamed_df):
 
 def format_last(x):
     try:
-        return float(x)
-    except:
-        return float(x.split('(')[0].replace(' ', ''))  # Split by ( to get rid of the (s) (c) then remove whitespace
+        return np.float32(x)
+    except:        
+        processed_value = x.split('(')[0].replace(' ', '')
+        return np.float32(processed_value)  # Split by ( to get rid of the (s) (c) then remove whitespace
 
 
 def day_stock(df, symbols):
@@ -87,9 +93,8 @@ def to_stock_format(df, symbols):
   df['value'] = df['last'].apply(format_last)
   return df[['date', 'cid', 'value', 'volume']]
 
+
 if __name__ == '__main__':
-    # store_file("compA 2020-01-01 09:02:02.532411", "boursorama")
-    # store_file("compB 2020-01-01 09:02:02.532411", "boursorama")
     path = "/home/bourse/data/boursorama.tar"
     if os.path.exists(path):
         print("File already exists")
@@ -110,7 +115,7 @@ if __name__ == '__main__':
         tar.close()
 
     print("Creating super data frame")
-    markets = ["peapme"]
+    markets = ["compA"]
     all_df = [create_super_data_frame(market) for market in markets]
 
     print("Renaming companies")
@@ -134,7 +139,7 @@ if __name__ == '__main__':
     del stocks_df
     gc.collect()
 
-    
+
     print("Creating day stocks data frame")
     day_stocks_df = pd.concat([day_stock(df, symbols) for df in renamed_df])
     del renamed_df
