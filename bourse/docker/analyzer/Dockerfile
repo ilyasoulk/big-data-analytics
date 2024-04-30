@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 MAINTAINER Olivier Ricou <olivier@ricou.eu.org>
 
 # If you have a web spider getting data, then you can run 
