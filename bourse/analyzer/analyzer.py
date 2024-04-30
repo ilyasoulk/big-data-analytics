@@ -1,7 +1,6 @@
 import pandas as pd
 import requests
 import numpy as np
-import sklearn
 import tarfile
 import os
 import dateutil
@@ -9,6 +8,10 @@ import glob
 import gc
 
 import timescaledb_model as tsdb
+
+# from tqdm import tqdm
+# from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 db = tsdb.TimescaleStockMarketModel('bourse', 'ricou', 'db', 'monmdp')  # inside docker
 
@@ -25,6 +28,44 @@ db = tsdb.TimescaleStockMarketModel('bourse', 'ricou', 'db', 'monmdp')  # inside
 #         # to be finished
 
 
+
+def load_pickle(file,market):
+    key = dateutil.parser.parse((file.split(market)[1].split('.'))[0])
+    df = pd.read_pickle(file)
+    return key, df
+
+
+# def create_super_data_frame_threading(market):
+#     files_2019 = glob.glob('./boursorama/' + '2019/' + market + '*')
+#     files_2020 = glob.glob('./boursorama/' + '2020/' + market + '*')
+#     files_2021 = glob.glob('./boursorama/' + '2021/' + market + '*')
+#     files_2022 = glob.glob('./boursorama/' + '2022/' + market + '*')
+#     files_2023 = glob.glob('./boursorama/' + '2023/' + market + '*')
+#     files = files_2019 + files_2020 + files_2021 + files_2022 + files_2023
+    
+#     print(f"Found {len(files)} files for {market}")
+
+#     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+#         futures = [executor.submit(load_pickle, file, market) for file in tqdm(files)]
+
+#         results = []
+#         for future in tqdm(as_completed(futures)):
+#           results.append(future.result())
+
+#     market_df = pd.concat({key: df for key, df in results})
+#     del results
+#     del futures
+#     return market_df
+
+# def is_compC(row):
+#     name = row['name']
+#     index = db.search_company_id(name)
+#     if index == 0:
+#         row['mid'] = 'compC'
+#     else:
+#         row = None
+#     return row
+
 def create_super_data_frame(market):
     years = ['2019', '2020', '2021', '2022', '2023']
     files = [glob.glob(f'/home/bourse/data/boursorama/{year}/{market}*') for year in years]
@@ -39,6 +80,7 @@ def create_super_data_frame(market):
         gc.collect()
 
     market_df.sort_index(inplace=True)
+    # market_df['mid'] = market
     return market_df
 
 
@@ -50,20 +92,34 @@ def rename_companies(df):
     df['name'] = df.groupby('symbol_column')['name'].transform('last')
     return df
 
+def symbol_to_id(symbol):
+    if symbol.startswith('FF11_'):
+        return 10
+    elif symbol.startswith('1rA'):
+        return 6
+    elif symbol.startswith('1rP') or symbol.startswith('1rEP'):
+        return 11
+    else:
+        return None 
+
 def to_company_format(df):
     company_df = df[['symbol_column', 'name']]
+    company_df.loc[:, 'mid'] = df['symbol_column'].apply(symbol_to_id)
     company_df.reset_index(drop=True, inplace=True)
     company_df = company_df.drop_duplicates(subset=['symbol_column'], keep='last')
+
     company_df.rename(columns={'symbol_column': 'symbol'}, inplace=True)
     return company_df
 
 def create_companies_df(renamed_df):
     pea_symbols = renamed_df[0]['symbol_column'].values
 
-    companies_format= [to_company_format(df) for df in renamed_df]
+    companies_format = [to_company_format(df) for df in renamed_df]
     companies_df = pd.concat(companies_format)
     companies_df.reset_index(drop=True, inplace=True)
     companies_df['pea'] = companies_df['symbol'].apply(lambda symbol: is_pea(symbol, pea_symbols))
+    companies_df.dropna(inplace=True)
+
     return companies_df
 
 
@@ -116,10 +172,13 @@ if __name__ == '__main__':
 
     print("Creating super data frame")
     markets = ["compA"]
+    markets = ["compA"]
     all_df = [create_super_data_frame(market) for market in markets]
+    # all_df = [create_super_data_frame_threading(market) for market in markets]
 
     print("Renaming companies")
     renamed_df = [rename_companies(df) for df in all_df]
+    print(renamed_df[0].head(5))
 
     print("Creating company data frame")
     companies_df = create_companies_df(renamed_df)

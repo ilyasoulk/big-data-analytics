@@ -16,7 +16,7 @@ services:
       - POSTGRES_USER=ricou
       - POSTGRES_PASSWORD=monmdp
     volumes:
-      - /Users/ilyas/Code/majeure/scia/bigdata/big-gragas/bourse/timescaledb:/var/lib/postgresql/data/timescaledb
+      - /home/hicham/Bureau/big-gragas/bourse/timescaledb:/var/lib/postgresql/data/timescaledb
 
   analyzer:
     image: my_analyzer
@@ -25,7 +25,7 @@ services:
     networks:
       - boursenet
     volumes:
-      - /Users/ilyas/Code/majeure/scia/bigdata/big-gragas/bourse/data:/home/bourse/data/
+      - /home/hicham/Bureau/big-gragas/bourse/data:/home/bourse/data/
 
   dashboard:
     image: my_dashboard

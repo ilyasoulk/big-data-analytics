@@ -160,3 +160,8 @@ cython_debug/
 .idea/
 bourse/timescaledb
 bourse/data
+bourse/docker/docker-compose.yml
+bourse/docker/analyzer/Makefile
+bourse/docker/dashboard/Makefile
+bourse/docker/analyzer/apps.tgz
+bourse/docker/dashboard/apps.tgz
