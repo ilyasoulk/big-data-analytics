@@ -10,6 +10,7 @@ import sqlalchemy
 from io import StringIO
 
 import mylogging
+import csv
 
 class TimescaleStockMarketModel:
     """ Bourse model with TimeScaleDB persistence."""
@@ -95,7 +96,7 @@ class TimescaleStockMarketModel:
                   close FLOAT4,
                   high FLOAT4,
                   low FLOAT4,
-                  volume INT
+                  volume BIGINT
                 );''')
             cursor.execute('''SELECT create_hypertable('daystocks', by_range('date'));''')
             cursor.execute('''CREATE INDEX idx_cid_daystocks ON daystocks (cid, date DESC);''')
@@ -217,25 +218,25 @@ class TimescaleStockMarketModel:
         0
         '''
         if getmax > 1:
-            print('toto')
-            res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(name) LIKE LOWER(%s)',
+            res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(symbol) LIKE LOWER(%s)',
                                  ('%' + name + '%',))
         else:
-            res = self.raw_query('SELECT (id) FROM companies WHERE name = %s', (name,))
+            res = self.raw_query('SELECT (id) FROM companies WHERE symbol = %s', (name,))
             if len(res) == 0 and not strict:
-                res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(name) LIKE LOWER(%s)', (name,))
+                res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(symbol) LIKE LOWER(%s)', (name,))
                 if len(res) == 0:
-                    res = self.raw_query('SELECT (id) FROM companies WHERE name LIKE %s', (name + '%',))
+                    res = self.raw_query('SELECT (id) FROM companies WHERE symbol LIKE %s', (name + '%',))
                     if len(res) == 0:
-                        res = self.raw_query('SELECT (id) FROM companies WHERE name LIKE %s', ('%' + name + '%',))
+                        res = self.raw_query('SELECT (id) FROM companies WHERE symbol LIKE %s', ('%' + name + '%',))
                         if len(res) == 0:
-                            res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(name) LIKE LOWER(%s)',
+                            res = self.raw_query('SELECT (id) FROM companies WHERE LOWER(symbol) LIKE LOWER(%s)',
                                                  ('%' + name + '%',))
         if len(res) == 1:
             return res[0][0]
         elif len(res) > 1 and len(res) < getmax:
             return [r[0] for r in res]
         else:
+            self.logger.debug('search_company_id: %s not found' % name)
             return 0
 
     def is_file_done(name):

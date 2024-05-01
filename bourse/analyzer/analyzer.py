@@ -27,7 +27,15 @@ def load_pickle(file,market):
     df = pd.read_pickle(file)
     return key, df
 
+def files_to_handle(market):
+        # Build a list of all files across years
+    years = ['2019', '2020', '2021', '2022', '2023']
+    files = []
+    for year in years:
+        files.extend(glob.glob(f'/home/bourse/data/boursorama/{year}/{market}*'))
 
+    # Sort files by date assuming file names contain date information right after market
+    files.sort(key=lambda x: dateutil.parser.parse(x.split(market)[1].split('.')[0]))
 def create_super_data_frame(market):
     files_2019 = glob.glob('/home/bourse/data/boursorama/' + '2019/' + market + '*')
     files_2020 = glob.glob('/home/bourse/data/boursorama/' + '2020/' + market + '*')
@@ -52,14 +60,12 @@ def symbol_to_id(symbol):
         return 10
     elif symbol.startswith('1rA'):
         return 6
-    elif symbol.startswith('1rP') or symbol.startswith('1rEP'):
-        return 11
-    else:
-        return None 
+    return 11
 
 def to_company_format(df):
     company_df = df[['symbol_column', 'name']]
     company_df['mid'] = df['symbol_column'].apply(symbol_to_id)
+    company_df['mid'] = company_df['mid'].astype('Int32')
     company_df.reset_index(drop=True, inplace=True)
     company_df = company_df.drop_duplicates(subset=['symbol_column'], keep='last')
 
@@ -70,8 +76,10 @@ def create_companies_df(renamed_df):
     pea_symbols = renamed_df[0]['symbol_column'].values
 
     companies_format = [to_company_format(df) for df in renamed_df]
+    logging.info("Concatenating companies")
     companies_df = pd.concat(companies_format)
     companies_df.reset_index(drop=True, inplace=True)
+    logging.info("Adding pea column")
     companies_df['pea'] = companies_df['symbol'].apply(lambda symbol: is_pea(symbol, pea_symbols))
     companies_df.dropna(inplace=True)
 
@@ -91,7 +99,7 @@ def day_stock(df, symbols):
     grouped = df.groupby([pd.Grouper(level='symbol'), pd.Grouper(level=0, freq='D')])
     df_day_stock = grouped.agg(open=('last', 'first'), high=('last', 'max'), low=('last', 'min'), close=('last', 'last'), volume=('volume', 'sum'))
     df_day_stock.reset_index(inplace=True)
-    df_day_stock['cid'] = df_day_stock['symbol'].apply(lambda symbol: np.where(symbols == symbol)[0][0])
+    df_day_stock = df_day_stock.merge(symbols, left_on='symbol', right_on='symbol', how='left')
     df_day_stock.rename(columns={'level_1': 'date'}, inplace=True)
     return df_day_stock[['date', 'cid', 'open', 'close', 'high', 'low', 'volume']]
 
@@ -100,7 +108,7 @@ def to_stock_format(df, symbols):
   df = df.copy()
   df['date'] = df.index.map(lambda date_symbol_tuple: date_symbol_tuple[0])
   df.reset_index(drop=True, inplace=True)
-  df['cid'] = df['symbol_column'].apply(lambda symbol: np.where(symbols == symbol)[0][0])
+  df = df.merge(symbols, left_on='symbol_column', right_on='symbol', how='left')
   df['value'] = df['last'].apply(format_last)
   return df[['date', 'cid', 'value', 'volume']]
 
@@ -126,7 +134,7 @@ if __name__ == '__main__':
         tar.close()
 
     logging.info("Creating super data frame")
-    markets = ["compA"] 
+    markets = ["peapme"] 
     all_df = [create_super_data_frame(market) for market in markets]
     # all_df = [create_super_data_frame_threading(market) for market in markets]
 
@@ -140,13 +148,15 @@ if __name__ == '__main__':
     logging.info("Inserting companies on DB")
     db.df_write(df=companies_df, table='companies', index=False)
 
-
     logging.info("Creating stocks data frame")
-    symbols = companies_df['symbol'].values # to get cid
+    companies_df['cid'] = companies_df['symbol'].apply(lambda name : db.search_company_id(name))
+    small_company_df = companies_df[['symbol', 'cid']]
+    small_company_df['cid'] = small_company_df['cid'].astype('Int32')
+    logging.info(f"small_company_df size: {len(small_company_df)}")
     del companies_df
     gc.collect()
 
-    stocks_df = pd.concat([to_stock_format(df, symbols) for df in renamed_df])
+    stocks_df = pd.concat([to_stock_format(df, small_company_df) for df in renamed_df])
     logging.info("Inserting stocks on db")
     db.df_write(df=stocks_df, table='stocks', index=False)
     del stocks_df
@@ -154,7 +164,7 @@ if __name__ == '__main__':
 
 
     logging.info("Creating day stocks data frame")
-    day_stocks_df = pd.concat([day_stock(df, symbols) for df in renamed_df])
+    day_stocks_df = pd.concat([day_stock(df, small_company_df) for df in renamed_df])
     del renamed_df
     gc.collect()
 
