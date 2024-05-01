@@ -7,6 +7,7 @@ import datetime
 import psycopg2
 import pandas as pd
 import sqlalchemy
+from io import StringIO
 
 import mylogging
 
@@ -155,7 +156,7 @@ class TimescaleStockMarketModel:
         self.logger.debug('df_write')
         df.to_sql(table, self.__engine,
                   if_exists=if_exists, index=index, index_label=index_label,
-                  chunksize=chunksize, dtype=dtype, method=method)
+                  chunksize=chunksize, dtype=dtype, method=self.psql_insert_copy)
         if commit:
             self.commit()
 
@@ -242,8 +243,52 @@ class TimescaleStockMarketModel:
         Check if a file has already been included in the DB
         '''
         return  self.raw_query("SELECT EXISTS ( SELECT 1 FROM file_done WHERE nom = '%s' );" % name)
+    
+
+    def copy_to_db(self, df, table):
+        buffer = io.StringIO()
+        df.to_csv(buffer, index=False, header=False)
+        buffer.seek(0)
+
+        with self.__connection.cursor() as cursor:
+            try:
+                cursor.copy_from(buffer, table, sep=',', null='')  # adjust the sep and null parameters as necessary
+                self.commit()
+            except Exception as e:
+                print("Error: ", e)
+                self.rollback()
 
 
+
+    def psql_insert_copy(self, table, conn, keys, data_iter):
+        """
+        Execute SQL statement inserting data
+
+        Parameters
+        ----------
+        table : pandas.io.sql.SQLTable
+        conn : sqlalchemy.engine.Engine or sqlalchemy.engine.Connection
+        keys : list of str
+            Column names
+        data_iter : Iterable that iterates the values to be inserted
+        """
+        # gets a DBAPI connection that can provide a cursor
+        dbapi_conn = conn.connection
+        with dbapi_conn.cursor() as cur:
+            s_buf = StringIO()
+            writer = csv.writer(s_buf)
+            writer.writerows(data_iter)
+            s_buf.seek(0)
+
+            columns = ', '.join('"{}"'.format(k) for k in keys)
+            if table.schema:
+                table_name = '{}.{}'.format(table.schema, table.name)
+            else:
+                table_name = table.name
+
+            sql = 'COPY {} ({}) FROM STDIN WITH CSV'.format(
+                table_name, columns)
+            cur.copy_expert(sql=sql, file=s_buf)
 #
 # main
 #
