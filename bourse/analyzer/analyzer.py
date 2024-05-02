@@ -10,6 +10,8 @@ from collections import defaultdict
 import gc
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
+
 
 import timescaledb_model as tsdb
 
@@ -141,6 +143,29 @@ def is_company_in_db(symbol):
     return db.search_company_id(symbol) != 0
 
 
+def process_data(batch):
+    start_batch = time.time()
+    logging.info("Creating dataframe for a batch")
+    df = create_dataframe_from_batch(batch)
+    logging.info("Creating stocks")
+    tmp_stocks = df.copy()
+    stocks_df = to_stock_format(tmp_stocks)
+    logging.info("Writing stocks into DB")
+    db.df_write(df=stocks_df, table='stocks', index=False)
+    del stocks_df
+    del tmp_stocks
+    gc.collect()
+
+    logging.info("Creating day stocks")
+    day_stocks_df = day_stock(df)
+    db.df_write(df=day_stocks_df, table='daystocks', index=False)
+    del day_stocks_df
+    gc.collect()
+    end_batch = time.time()
+    logging.info(f"Time taken for a batch : {end_batch - start_batch} seconds")
+
+
+
 if __name__ == "__main__":
     path = "/home/bourse/data/boursorama.tar"
     if os.path.exists(path):
@@ -176,26 +201,8 @@ if __name__ == "__main__":
     batches = get_file_batches()
     del full_df
     gc.collect()
-    for batch in batches:
-        start_batch = time.time()
-        logging.info("Creating dataframe for a batch")
-        df = create_dataframe_from_batch(batch)
-        logging.info("Creating stocks")
-        tmp_stocks = df.copy()
-        stocks_df = to_stock_format(tmp_stocks)
-        logging.info("Writing stocks into DB")
-        db.df_write(df=stocks_df, table='stocks', index=False)
-        del stocks_df
-        del tmp_stocks
-        gc.collect()
-
-        logging.info("Creating day stocks")
-        day_stocks_df = day_stock(df)
-        db.df_write(df=day_stocks_df, table='daystocks', index=False)
-        del day_stocks_df
-        gc.collect()
-        end_batch = time.time()
-        logging.info(f"Time taken for a batch : {end_batch - start_batch} seconds")
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        executor.map(process_data, batches)
 
     end_time = time.time()
     logging.info(f"Time taken for filling the whole DB : {end_time - start_time} seconds")

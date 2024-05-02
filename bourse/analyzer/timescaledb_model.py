@@ -169,7 +169,6 @@ class TimescaleStockMarketModel:
             pretty = query
         else:
             pretty = '%s %% %r' % (query, args)
-        self.logger.debug('SQL: QUERY: %s' % pretty)
         if cursor is None:
             cursor = self.__connection.cursor()
         cursor.execute(query, args)
