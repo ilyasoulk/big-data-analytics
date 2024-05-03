@@ -10,7 +10,9 @@ from collections import defaultdict
 import gc
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+from functools import partial
+
 
 
 import timescaledb_model as tsdb
@@ -127,14 +129,12 @@ def day_stock(df):
     grouped = df.groupby([pd.Grouper(level='symbol'), pd.Grouper(level=0, freq='D')])
     df_day_stock = grouped.agg(open=('last', 'first'), high=('last', 'max'), low=('last', 'min'), close=('last', 'last'), volume=('volume', 'sum'))
     df_day_stock.reset_index(inplace=True)
-    df_day_stock['cid'] = df_day_stock['symbol'].apply(db.search_company_id)
     df_day_stock.rename(columns={'level_1': 'date'}, inplace=True)
     return df_day_stock[['date', 'cid', 'open', 'close', 'high', 'low', 'volume']]
 
 def to_stock_format(df):
     df['date'] = df.index.map(lambda date_symbol_tuple: date_symbol_tuple[0])
     df.reset_index(drop=True, inplace=True)
-    df['cid'] = df['symbol'].apply(db.search_company_id)
     df['value'] = df['last'].apply(format_last)
     return df[['date', 'cid', 'value', 'volume']]
 
@@ -143,10 +143,13 @@ def is_company_in_db(symbol):
     return db.search_company_id(symbol) != 0
 
 
-def process_data(batch):
+def process_data(batch, companies):
     start_batch = time.time()
-    logging.info("Creating dataframe for a batch")
+    date = batch[0].split(' ')[1]
+    logging.info(f"Processing batch for date : {date}")
     df = create_dataframe_from_batch(batch)
+    logging.info("Adding company id to the dataframe")
+    df['cid'] = df['symbol'].map(companies)
     logging.info("Creating stocks")
     tmp_stocks = df.copy()
     stocks_df = to_stock_format(tmp_stocks)
@@ -198,11 +201,13 @@ if __name__ == "__main__":
     db.df_write(df=full_df, table='companies', index=False) 
     end_companies = time.time()
     logging.info(f"Time taken for filling companies : {end_companies - start_time} seconds")
+    full_df['cid'] = full_df['symbol'].apply(db.search_company_id)
+    companies = full_df[['symbol', 'cid']]
+    dict_companies = dict(zip(companies['symbol'], companies['cid']))
     batches = get_file_batches()
-    del full_df
-    gc.collect()
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        executor.map(process_data, batches)
+    proccess_data_partial = partial(process_data, companies=dict_companies)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+        executor.map(proccess_data_partial, batches)
 
     end_time = time.time()
     logging.info(f"Time taken for filling the whole DB : {end_time - start_time} seconds")
