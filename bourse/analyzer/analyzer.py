@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.DEBUG,  # Set minimum log level to DEBUG
 def get_file_batches():
     # Build a list of all files across years
     years = ['2019', '2020', '2021', '2022', '2023']
-    markets = ['compA', 'compB', 'peapme']
+    markets = ['compA', 'compB', 'peapme', 'amsterdam']
     files = []
     for year in years:
         for market in markets:
@@ -64,7 +64,7 @@ def get_file_batches():
 
 
 def create_dataframe_from_batch(batch):
-    markets = ['compA', 'compB', 'peapme']
+    markets = ['compA', 'compB', 'peapme', 'amsterdam']
     data_frames = defaultdict(list)
     for file in batch:
         for market in markets:
@@ -73,7 +73,8 @@ def create_dataframe_from_batch(batch):
                     date_part = file.split(market)[1].split('.')[0]
                     date = dateutil.parser.parse(date_part)
                     df = pd.read_pickle(file)
-                    df['pea'] = market == "peapme"
+                    if market == 'amsterdam':
+                        df['mid'] = 1
                     data_frames[date].append(df)
                 except ValueError as e:
                     logging.warning(f"Parsing file failed : {e}")
@@ -84,7 +85,7 @@ def create_dataframe_from_batch(batch):
     return market_df
 
 
-def create_superdf_companies(market):
+""" def create_superdf_companies(market):
     # Build a list of all files across specified years
     years = ['2019', '2020', '2021', '2022', '2023']
     files = []
@@ -97,6 +98,50 @@ def create_superdf_companies(market):
     market_df.drop_duplicates(subset='symbol', keep='last', inplace=True)
 
     return market_df
+ """
+
+def create_superdf_companies(market):
+    # Build a list of all files across years for the specified market
+    years = ['2019', '2020', '2021', '2022', '2023']
+    files = []
+    for year in years:
+        files.extend(glob.glob(f'data/boursorama/{year}/{market}*'))
+
+    # Create a dictionary to hold files by date
+    files_by_date = defaultdict(list)
+
+    # Group files by date
+    for file in files:
+        # Extract the date part from the file name
+        filename = file.split('/')[-1]
+        date_part = filename[len(market):].split('.')[0]
+        try:
+            date = dateutil.parser.parse(date_part).date()  # parse and keep only the date part
+            files_by_date[date].append(file)
+        except ValueError:
+            logging.warning(f"Could not parse date from file name: {filename}")
+
+    # Prepare to read only the first and last files per day
+    market_dfs = []
+    for date, date_files in files_by_date.items():
+        if date_files:
+            # Sort files to ensure they are in the correct order
+            sorted_files = sorted(date_files)
+            selected_files = [sorted_files[0], sorted_files[-1]] if len(sorted_files) > 1 else [sorted_files[0]]
+
+            # Read the first and last file and extract necessary columns
+            for file in selected_files:
+                df = pd.read_pickle(file)[['symbol', 'name']]
+                df['pea'] = (market == 'peapme')
+                market_dfs.append(df)
+
+    # Concatenate all DataFrames into a single DataFrame
+    if market_dfs:
+        complete_df = pd.concat(market_dfs, ignore_index=True)
+        complete_df.drop_duplicates(subset='symbol', keep='last', inplace=True)
+        return complete_df
+
+    return pd.DataFrame()  # Return an empty DataFrame if no files were processed
 
 
 def symbol_to_id(symbol):
@@ -109,8 +154,9 @@ def symbol_to_id(symbol):
 def rename_companies(df):
     df['pea'] = df.groupby('symbol')['pea'].transform(any)
     df['name'] = df.groupby('symbol')['name'].transform('last')
-    df['mid'] = df['symbol'].apply(symbol_to_id)
-    df['mid'] = df['mid'].astype('Int32')
+    if 'mid' not in df.columns:
+        df['mid'] = df['symbol'].apply(symbol_to_id)
+    df['mid'] = df['mid'].astype('Int16')
     df.reset_index(drop=True, inplace=True)
     df = df.drop_duplicates(subset=['symbol'], keep='last')
     df.dropna(inplace=True)
@@ -150,6 +196,7 @@ def process_data(batch, companies):
     df = create_dataframe_from_batch(batch)
     logging.info("Adding company id to the dataframe")
     df['cid'] = df['symbol'].map(companies)
+    df['cid'] = df['cid'].astype('Int16')
     logging.info("Creating stocks")
     tmp_stocks = df.copy()
     stocks_df = to_stock_format(tmp_stocks)
@@ -190,7 +237,7 @@ if __name__ == "__main__":
         tar.close()
 
     start_time = time.time()
-    files = ["compA", "compB", "peapme"]
+    files = ["compA", "compB", "peapme", "amsterdam"]
     logging.info("Creating super dataframe")
     super_df = [create_superdf_companies(file) for file in files]
     renamed_df = [rename_companies(df) for df in super_df]
