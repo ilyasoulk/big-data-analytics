@@ -28,40 +28,59 @@ companies = companies_df['name'].to_numpy()
 app = dash.Dash(__name__,  title="Bourse", suppress_callback_exceptions=True) # , external_stylesheets=external_stylesheets)
 server = app.server
 app.layout = html.Div([
-    html.H2(
-        f"Fuck Ricou",
-        style={"textAlign": "center"},
-    ),
-    html.Div("Type de graphe chacal"),
-    dcc.RadioItems(
-        id="chandelier",
-        options=["Ligne", "Chandelier"],
-        value="Chandelier",
-    ),
-    dcc.DatePickerRange(
-        id="date-range",
-        min_date_allowed=pd.to_datetime("2000-01-01"),
-        max_date_allowed=pd.to_datetime("today"),
-        initial_visible_month=pd.to_datetime("today"),
-        start_date=pd.to_datetime("2000-01-01"),
-        end_date=pd.to_datetime("today"),
-        display_format="YYYY-MM-DD",
-        clearable=True,
-    ),
-    dcc.Dropdown(
-        id="checklist",
-        options=companies,
-        value=companies[:3],
-        multi=True,
-    ),
-    html.Div(id="graphs"),
-    dcc.Checklist(
-        id="markets",
-        options=["amsterdam", "bruxelle", "paris"],
-        value=["bruxelle"],
-        inline=True,
-    ),
-    ]
+        html.H2(
+            f"Fuck Ricou",
+            style={"textAlign": "center", "color": "#fff"}  # Couleur du texte blanc
+            ,
+        ),
+        html.Div([
+            dcc.RadioItems(
+                id="chandelier",
+                options=[
+                    {"label": "Ligne", "value": "Ligne"},
+                    {"label": "Chandelier", "value": "Chandelier"}
+                ],
+                value="Chandelier",
+                style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
+            ),
+            dcc.DatePickerRange(
+                id="date-range",
+                min_date_allowed=pd.to_datetime("2000-01-01"),
+                max_date_allowed=pd.to_datetime("today"),
+                initial_visible_month=pd.to_datetime("today"),
+                start_date=pd.to_datetime("2000-01-01"),
+                end_date=pd.to_datetime("today"),
+                display_format="YYYY-MM-DD",
+                clearable=True,
+                style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
+            ),
+            dcc.Dropdown(
+                id="checklist",
+                options=companies,
+                value=companies[:3],
+                multi=True,
+                style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
+            ), 
+            dcc.Checklist(
+                id="markets",
+                options=["amsterdam", "bruxelle", "paris", "amsterdam"],
+                value=['bruxelle'],  
+                inline=True,
+                style={
+                    "flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px", "align-items": "center", "display": "flex", 
+                },
+              
+            )
+            ],
+            style={"display": "flex", "flex-direction": "row", "row-gap": "10px", "column-gap": "10px", "margin-bottom": "20px"}
+        ),
+        html.Div(id="graphs"),
+    ],
+    style={
+        "background": "linear-gradient(to bottom, #471463, #1f072b)",
+        "padding": "20px",  # Remplissage autour du contenu
+        "min-height": "100vh"
+    }
 )
 
 @app.callback(ddep.Output('graphs', 'children'),
@@ -75,12 +94,6 @@ app.layout = html.Div([
 )
 
 def update_graph(style, companies, markets, start_date, end_date):
-    if not companies:
-        return html.H3(
-            "Select a company.",
-            style={'marginTop': 20, 'marginBottom': 20}
-        )
-    else:
         graphs = []
         if style == "Chandelier":
             for company in companies:
@@ -149,9 +162,9 @@ def update_graph(style, companies, markets, start_date, end_date):
                         'layout': {
                             'margin': {'b': 0, 'r': 10, 'l': 60, 't': 0},
                             'legend': {'x': 0},
-                            'xaxis': {'rangeslider': {'visible': False}}
+                            'xaxis': {'rangeslider': {'visible': True}}
                         }
-                    }
+                    },
                 ))
 
                 graphs.append(dcc.Graph(
@@ -161,9 +174,9 @@ def update_graph(style, companies, markets, start_date, end_date):
                         'layout': {
                             'margin': {'b': 30, 'r': 10, 'l': 60, 't': 0},
                             'legend': {'x': 0},
-                            'xaxis': {'rangeslider': {'visible': False}}
+                            'xaxis': {'rangeslider': {'visible': True}}
                         }
-                    }
+                    },
                 ))
         else:
             for company in companies:
@@ -183,13 +196,13 @@ def update_graph(style, companies, markets, start_date, end_date):
                 df['date'] = pd.to_datetime(df['date'])
                 df.sort_values(by='date', inplace=True)
                 fig = px.line(df, x='date', y='value', color='name')
-                fig.update_layout(title='Line Chart',
+                fig.update_layout(title=company,
                     xaxis_title='Date',
-                    yaxis_title='Price')
-
+                    yaxis_title='Price',
+                )
                 graphs.append(dcc.Graph(
                     id=f'{company} - Line',
-                    figure=fig
+                    figure=fig,
                 ))
 
         return graphs
