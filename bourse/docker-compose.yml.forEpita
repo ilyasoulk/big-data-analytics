@@ -25,7 +25,7 @@ services:
     networks:
       - boursenet
     volumes:
-      - /srv/libvirt-workdir/boursorama/data:/home/bourse/data/
+      - /srv/libvirt-workdir/data:/home/bourse/data/
 
   dashboard:
     image: my_dashboard
