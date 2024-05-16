@@ -217,25 +217,6 @@ def process_data(batch, companies):
 
 
 if __name__ == "__main__":
-    path = "/home/bourse/data/boursorama.tar"
-    if os.path.exists(path):
-        logging.info("File already exists")
-    else:
-        url = 'https://www.lrde.epita.fr/~ricou/pybd/projet/boursorama.tar'
-        stream = requests.get(url, stream=True)
-        with open('/home/bourse/data/boursorama.tar', 'wb') as f:
-            for chunk in stream.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-
-    dir = "/home/bourse/data/boursorama"
-    if os.path.exists(dir):
-        logging.info("Directory already exists")
-    else:
-        tar = tarfile.open(path)
-        tar.extractall('/home/bourse/data')
-        tar.close()
-
     start_time = time.time()
     files = ["compA", "compB", "peapme", "amsterdam"]
     logging.info("Creating super dataframe")
