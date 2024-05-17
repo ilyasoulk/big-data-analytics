@@ -38,11 +38,23 @@ app.layout = html.Div([
                 id="chandelier",
                 options=[
                     {"label": "Ligne", "value": "Ligne"},
-                    {"label": "Chandelier", "value": "Chandelier"}
+                    {"label": "Chandelier", "value": "Chandelier"},
+                    {"label": "Query", "value": "Query"}
                 ],
                 value="Chandelier",
                 style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
             ),
+            dcc.Textarea(
+                id='sql-query',
+                value='''
+                    SELECT * FROM pg_catalog.pg_tables
+                        WHERE schemaname != 'pg_catalog' AND 
+                                schemaname != 'information_schema';
+                ''',
+                style={'width': '100%', 'height': 100},
+            ),
+            html.Button('Execute', id='execute-query', n_clicks=0),
+            html.Div(id='query-result'),
             dcc.DatePickerRange(
                 id="date-range",
                 min_date_allowed=pd.to_datetime("2000-01-01"),
@@ -95,23 +107,24 @@ app.layout = html.Div([
             ddep.State('sql-query', 'value')
 )
 
-def update_graph(style, companies, markets, start_date, end_date):
+def update_graph(style, companies, markets, start_date, end_date, n_clicks, query):
         graphs = []
         if style == "Chandelier":
             for company in companies:
-                query = f"""SELECT date, open, close, high, low, volume FROM daystocks ds
-                        JOIN companies c ON ds.cid = c.id
-                        JOIN markets m ON c.mid = m.id
-                        WHERE c.name = '{company}'"""
+                if not query:
+                    query = f"""SELECT date, open, close, high, low, volume FROM daystocks ds
+                            JOIN companies c ON ds.cid = c.id
+                            JOIN markets m ON c.mid = m.id
+                            WHERE c.name = '{company}'"""
 
-                if markets:
-                    markets_condition = "('" + "', '".join(markets) + "')"
-                    query += f" AND m.alias IN {markets_condition}"
+                    if markets:
+                        markets_condition = "('" + "', '".join(markets) + "')"
+                        query += f" AND m.alias IN {markets_condition}"
 
-                if start_date and end_date:
-                    query += f" AND date BETWEEN '{start_date}' AND '{end_date}';"
-                else:
-                    query += ";"
+                    if start_date and end_date:
+                        query += f" AND date BETWEEN '{start_date}' AND '{end_date}';"
+                    else:
+                        query += ";"
 
                 df = pd.read_sql_query(query, engine)
 
@@ -180,19 +193,20 @@ def update_graph(style, companies, markets, start_date, end_date):
                         }
                     },
                 ))
-        else if style == "Ligne":
+        else:
             for company in companies:
-                query = f"""SELECT s.date, s.value, c.name
-                        FROM stocks s
-                        JOIN companies c ON s.cid = c.id
-                        JOIN markets m ON c.mid = m.id
-                        WHERE c.name = '{company}'"""
+                if not query:
+                    query = f"""SELECT s.date, s.value, c.name
+                            FROM stocks s
+                            JOIN companies c ON s.cid = c.id
+                            JOIN markets m ON c.mid = m.id
+                            WHERE c.name = '{company}'"""
 
-                if markets:
-                    markets_condition = "('" + "', '".join(markets) + "')"
-                    query += f" AND m.alias IN {markets_condition};"
-                else:
-                    query += ";"
+                    if markets:
+                        markets_condition = "('" + "', '".join(markets) + "')"
+                        query += f" AND m.alias IN {markets_condition};"
+                    else:
+                        query += ";"
 
                 df = pd.read_sql_query(query, engine)
                 df['date'] = pd.to_datetime(df['date'])
@@ -206,14 +220,6 @@ def update_graph(style, companies, markets, start_date, end_date):
                     id=f'{company} - Line',
                     figure=fig,
                 ))
-        else:
-            if n_clicks > 0:
-                try:
-                    result_df = pd.read_sql_query(query, engine)
-                    return html.Pre(result_df.to_string())
-                except Exception as e:
-                    return html.Pre(str(e))
-            return "Enter a query and press execute."
 
         return graphs
             
