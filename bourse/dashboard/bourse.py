@@ -35,9 +35,20 @@ app.layout = html.Div([
     html.Div("Type de graphe chacal"),
     dcc.RadioItems(
         id="chandelier",
-        options=["Ligne", "Chandelier"],
+        options=["Ligne", "Chandelier", "Query"],
         value="Chandelier",
     ),
+    dcc.Textarea(
+        id='sql-query',
+        value='''
+            SELECT * FROM pg_catalog.pg_tables
+                WHERE schemaname != 'pg_catalog' AND 
+                        schemaname != 'information_schema';
+        ''',
+        style={'width': '100%', 'height': 100},
+    ),
+    html.Button('Execute', id='execute-query', n_clicks=0),
+    html.Div(id='query-result'),
     dcc.DatePickerRange(
         id="date-range",
         min_date_allowed=pd.to_datetime("2000-01-01"),
@@ -70,11 +81,13 @@ app.layout = html.Div([
                 ddep.Input('checklist', 'value'),
                 ddep.Input('markets', 'value'),
                 ddep.Input('date-range', 'start_date'),
-                ddep.Input('date-range', 'end_date')
-            ]
+                ddep.Input('date-range', 'end_date'),
+                ddep.Input('execute-query', 'n_clicks')
+            ],
+            ddep.State('sql-query', 'value')
 )
 
-def update_graph(style, companies, markets, start_date, end_date):
+def update_graph(style, companies, markets, start_date, end_date, n_clicks, query):
     if not companies:
         return html.H3(
             "Select a company.",
@@ -165,7 +178,7 @@ def update_graph(style, companies, markets, start_date, end_date):
                         }
                     }
                 ))
-        else:
+        else if style == "Ligne":
             for company in companies:
                 query = f"""SELECT s.date, s.value, c.name
                         FROM stocks s
@@ -191,6 +204,14 @@ def update_graph(style, companies, markets, start_date, end_date):
                     id=f'{company} - Line',
                     figure=fig
                 ))
+        else:
+            if n_clicks > 0:
+                try:
+                    result_df = pd.read_sql_query(query, engine)
+                    return html.Pre(result_df.to_string())
+                except Exception as e:
+                    return html.Pre(str(e))
+            return "Enter a query and press execute."
 
         return graphs
             
