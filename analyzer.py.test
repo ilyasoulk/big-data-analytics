@@ -41,15 +41,15 @@ def get_file_batches():
     # Create a dictionary to hold files by date
     files_by_date = defaultdict(list)
 
-    # Group files by date
-    for file in files:
+    for market in markets:
         # Extract the market prefix and the date part from the file name
-        path_parts = file.split('/')
-        filename = path_parts[-1]
-        for market in markets:
+        start = len(market)
+        # Group files by date
+        for file in files:
+            path_parts = file.split('/')
+            filename = path_parts[-1]
             if market in filename:
                 # Attempt to extract the date part directly following the market name
-                start = len(market)
                 date_part = filename[start:].split('.')[0]
                 try:
                     date = dateutil.parser.parse(date_part).date()  # parse and keep only the date part
@@ -66,19 +66,27 @@ def get_file_batches():
 def create_dataframe_from_batch(batch):
     markets = ['compA', 'compB', 'peapme', 'amsterdam']
     data_frames = defaultdict(list)
+    i = 0
+    batch_size = len(batch)
     for file in batch:
+        if i % 100 == 0:
+            logging.info(f"Len of companies : {i/batch_size}")
         for market in markets:
             if market in file:
                 try:
                     date_part = file.split(market)[1].split('.')[0]
                     date = dateutil.parser.parse(date_part)
                     df = pd.read_pickle(file)
+                    os.remove(file)
                     if market == 'amsterdam':
                         df['mid'] = 1
                     data_frames[date].append(df)
                 except ValueError as e:
                     logging.warning(f"Parsing file failed : {e}")
                 break
+
+
+
 
     market_df = pd.concat({pd.to_datetime(date): pd.concat(dfs) for date, dfs in data_frames.items()})
 
@@ -234,7 +242,7 @@ if __name__ == "__main__":
     dict_companies = dict(zip(companies['symbol'], companies['cid']))
     batches = get_file_batches()
     proccess_data_partial = partial(process_data, companies=dict_companies)
-    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=16) as executor:
         executor.map(proccess_data_partial, batches)
 
     end_time = time.time()

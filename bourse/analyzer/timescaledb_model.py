@@ -84,7 +84,7 @@ class TimescaleStockMarketModel:
                   date TIMESTAMPTZ,
                   cid SMALLINT,
                   value FLOAT4,
-                  volume INT
+                  volume BIGINT
                 );''')
             cursor.execute('''SELECT create_hypertable('stocks', by_range('date'));''')
             cursor.execute('''CREATE INDEX idx_cid_stocks ON stocks (cid, date DESC);''')
@@ -169,7 +169,6 @@ class TimescaleStockMarketModel:
             pretty = query
         else:
             pretty = '%s %% %r' % (query, args)
-        self.logger.debug('SQL: QUERY: %s' % pretty)
         if cursor is None:
             cursor = self.__connection.cursor()
         cursor.execute(query, args)
