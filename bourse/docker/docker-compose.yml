@@ -4,7 +4,7 @@ networks:
 
 services:
   db:
-    image: timescale/timescaledb:latest-pg16
+    image: reg.undercloud.cri.epita.fr/docker/timescale/timescaledb:latest-pg16
     command: postgres -c shared_preload_libraries=timescaledb
     ports:
       - "5432:5432"
@@ -16,7 +16,7 @@ services:
       - POSTGRES_USER=ricou
       - POSTGRES_PASSWORD=monmdp
     volumes:
-      - /home/hicham/Bureau/big-gragas/bourse/timescaledb:/var/lib/postgresql/data/timescaledb
+      - ~/timescaledb:/var/lib/postgresql/data/timescaledb
 
   analyzer:
     image: my_analyzer
@@ -25,7 +25,7 @@ services:
     networks:
       - boursenet
     volumes:
-      - /home/hicham/Bureau/big-gragas/bourse/data:/home/bourse/data/
+      - /srv/libvirt-workdir/data:/home/bourse/data/
 
   dashboard:
     image: my_dashboard
