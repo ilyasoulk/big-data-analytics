@@ -1,24 +1,19 @@
-# big-data-analytics
+# How to launch the project:
 
-
-How to launch the project:
-
-1. Move the bourse dir of this repo on this /srv/libvirt-workdir directory
+1. Move the bourse dir of this repo on your home directory :  ~
 2. Download the boursorama.tar : https://www.lrde.epita.fr/~ricou/pybd/projet/boursorama.tar
-3. Run this script :
+3. Run this command :
 
-cd /srv/libvirt-workdir && mkdir data
-tar -xvf ~/Downloads/bousorama.tar .
-rm ~/Downloads/boursorama.tar
-(cd /srv/libvirt-workdir/bourse/docker/analyzer && make fast);
-(cd /srv/libvirt-workdir/bourse/docker/dashboard && make fast);
+cd /srv/libvirt-workdir && mkdir data && tar -xvf ~/Downloads/bousorama.tar && rm ~/Downloads/boursorama.tar &&
+(cd ~/bourse/docker/analyzer && make fast); &&
+(cd ~/bourse/docker/dashboard && make fast);
 
-4. Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up db
-5. Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up analyzer
-6. Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up dashboard
+4. Open a terminal and run this command : cd ~/bourse/docker/analyzer && docker compose up db
+5. Open a terminal and run this command : cd ~/bourse/docker/analyzer && docker compose up analyzer
+6. Open a terminal and run this command : cd ~/bourse/docker/analyzer && docker compose up dashboard
 
 
-### Here is a resume of every cleaning process that we did on the given data  ###
+# Cleaning: Here is a resume of every cleaning process that we did on the given data  ###
 
 1. Verifying and dropping the None and NaN value of our dataFrames
 2. Verifying if some companies did not change their names in 5 years and edit the name like LNC which became BASSAC
