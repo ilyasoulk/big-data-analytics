@@ -29,7 +29,7 @@ app = dash.Dash(__name__,  title="Bourse", suppress_callback_exceptions=True) # 
 server = app.server
 app.layout = html.Div([
         html.H2(
-            f"Fuck Ricou",
+            f"Welcome to our project",
             style={"textAlign": "center", "color": "#fff"}  # Couleur du texte blanc
             ,
         ),
