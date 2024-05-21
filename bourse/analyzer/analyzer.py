@@ -184,15 +184,12 @@ def is_company_in_db(symbol):
 def process_data(batch, companies):
     start_batch = time.time()
     date = batch[0].split(' ')[1]
-    logging.info(f"Processing batch for date : {date}")
+    logging.info(f"Processing batch : {date}")
     df = create_dataframe_from_batch(batch)
-    logging.info("Adding company id to the dataframe")
     df['cid'] = df['symbol'].map(companies)
     df['cid'] = df['cid'].astype('Int16')
-    logging.info("Creating stocks")
     tmp_stocks = df.copy()
     stocks_df = to_stock_format(tmp_stocks)
-    logging.info("Writing stocks into DB")
     db.df_write(df=stocks_df, table='stocks', index=False)
     del stocks_df
     del tmp_stocks
@@ -226,7 +223,7 @@ if __name__ == "__main__":
     dict_companies = dict(zip(companies['symbol'], companies['cid']))
     batches = get_file_batches()
     proccess_data_partial = partial(process_data, companies=dict_companies)
-    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=16) as executor:
         executor.map(proccess_data_partial, batches)
 
     end_time = time.time()
