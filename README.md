@@ -3,9 +3,9 @@
 
 How to launch the project:
 
-Step 1: Move the bourse dir of this repo on this /srv/libvirt-workdir directory
-Step 2: Download the boursorama.tar : https://www.lrde.epita.fr/~ricou/pybd/projet/boursorama.tar
-Step 3: Run this script :
+1. Move the bourse dir of this repo on this /srv/libvirt-workdir directory
+2. Download the boursorama.tar : https://www.lrde.epita.fr/~ricou/pybd/projet/boursorama.tar
+3. Run this script :
 
 cd /srv/libvirt-workdir && mkdir data
 tar -xvf ~/Downloads/bousorama.tar .
@@ -13,9 +13,9 @@ rm ~/Downloads/boursorama.tar
 (cd /srv/libvirt-workdir/bourse/docker/analyzer && make fast);
 (cd /srv/libvirt-workdir/bourse/docker/dashboard && make fast);
 
-Step 4: Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up db
-Step 5: Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up analyzer
-Step 6: Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up dashboard
+4. Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up db
+5. Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up analyzer
+6. Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/docker/analyzer && docker compose up dashboard
 
 
 ### Here is a resume of every cleaning process that we did on the given data  ###
@@ -29,9 +29,8 @@ Step 6: Open a terminal and run this command : cd /srv/libvirt-workdir/bourse/do
 5. Checking if the 'volume' format is correct (positive integer) && Dropping every volume value that are negative such as the value from the XXX company or the XXX company
 6. Checking if the 'name' format is correct (all caps) && Edit the names that are not alike Ex:  'PLASTiVALOIRE' != 'PLASTIVALOIRE' (only one found)
 7. Checking if the 'date' format is correct : YYYY-MM-DD HH:MM:SS.microsecondes with YYYY = name of the dir
-# 8. Checking if the 'symbol' format is correct
-# 9. Drop the duplicates if there is any
+8. Checking if the 'symbol' format is correct
+9. Drop the duplicates if there is any
 
-
-# Note:
-# After a discussion with an assistant, we don't really have to verify the outliers because big variation of values is something that is normal in the bourse area
+Note:
+After a discussion with an assistant, we don't really have to verify the outliers because big variation of values is something that is normal in the bourse area
