@@ -66,7 +66,14 @@ def get_file_batches():
 def create_dataframe_from_batch(batch):
     markets = ['compA', 'compB', 'peapme', 'amsterdam']
     data_frames = defaultdict(list)
+
+    i = 0
+    batch_size = len(batch)
+
     for file in batch:
+        if i % 100 == 0 and i != 0:
+            logging.info(f"Progress on batch : {i}/{batch_size}")
+
         for market in markets:
             if market in file:
                 try:
@@ -84,21 +91,6 @@ def create_dataframe_from_batch(batch):
 
     return market_df
 
-
-""" def create_superdf_companies(market):
-    # Build a list of all files across specified years
-    years = ['2019', '2020', '2021', '2022', '2023']
-    files = []
-    for year in years:
-        files.extend(glob.glob(f'data/boursorama/{year}/{market}*'))
-    
-    # Create an empty DataFrame to append data
-    market_df = pd.concat([pd.read_pickle(f)[['symbol', 'name']] for f in files], ignore_index=True)
-    market_df['pea'] = (market == 'peapme')
-    market_df.drop_duplicates(subset='symbol', keep='last', inplace=True)
-
-    return market_df
- """
 
 def create_superdf_companies(market):
     # Build a list of all files across years for the specified market
