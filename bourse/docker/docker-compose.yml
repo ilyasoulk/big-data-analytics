@@ -16,7 +16,7 @@ services:
       - POSTGRES_USER=ricou
       - POSTGRES_PASSWORD=monmdp
     volumes:
-      - ~/timescaledb:/var/lib/postgresql/data/timescaledb
+      - /srv/libvirt-workdir/timescaledb:/var/lib/postgresql/data/timescaledb
 
   analyzer:
     image: my_analyzer
