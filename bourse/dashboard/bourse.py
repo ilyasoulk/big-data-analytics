@@ -75,7 +75,7 @@ app.layout = html.Div([
             ), 
             dcc.Checklist(
                 id="markets",
-                options=["amsterdam", "bruxelle", "paris", "amsterdam"],
+                options=["amsterdam", "bruxelle", "paris"],
                 value=['bruxelle'],  
                 inline=True,
                 style={
