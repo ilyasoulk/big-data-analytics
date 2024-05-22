@@ -5,7 +5,7 @@
 3. Run this command :
 
 ```
-cd /srv/libvirt-workdir && mkdir data && tar -xvf ~/Downloads/bousorama.tar && rm ~/Downloads/boursorama.tar &&
+cd /srv/libvirt-workdir && mkdir data && cd data && tar -xvf ~/Downloads/boursorama.tar && rm ~/Downloads/boursorama.tar &&
 (cd ~/bourse/docker/analyzer && make fast); &&
 (cd ~/bourse/docker/dashboard && make fast);
 ```
