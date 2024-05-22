@@ -6,8 +6,8 @@
 
 ```
 cd /srv/libvirt-workdir && mkdir data && cd data && tar -xvf ~/Downloads/boursorama.tar && rm ~/Downloads/boursorama.tar &&
-(cd ~/bourse/docker/analyzer && make fast); &&
-(cd ~/bourse/docker/dashboard && make fast);
+cd ~/bourse/docker/analyzer && make fast &&
+cd ~/bourse/docker/dashboard && make fast
 ```
 
 4. Open a terminal and run this command : `cd ~/bourse/docker/analyzer && docker compose up db`
