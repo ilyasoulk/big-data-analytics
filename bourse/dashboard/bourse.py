@@ -46,11 +46,7 @@ app.layout = html.Div([
             ),
             dcc.Textarea(
                 id='sql-query',
-                value='''
-                    SELECT * FROM pg_catalog.pg_tables
-                        WHERE schemaname != 'pg_catalog' AND 
-                                schemaname != 'information_schema';
-                ''',
+                value='',
                 style={'width': '100%', 'height': 100},
             ),
             html.Button('Execute', id='execute-query', n_clicks=0),
