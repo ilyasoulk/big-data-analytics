@@ -12,7 +12,7 @@ cd ~/bourse/docker/dashboard && make fast
 
 4. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up db`
 5. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up analyzer`
-6. The waiting time is around `13 MINUTES`, if you are on a PC with 16 cores. While waiting, please delete any useless window/terminal (like firefox) to save some memory.
+6. If you are on a PC with 16 cores, the waiting time should be around `13 MINUTES`. While waiting, please delete any useless window/terminal (like firefox) to save some memory.
 7. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up dashboard`
 8. Go to the `localhost:8050`
 
