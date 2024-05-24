@@ -10,9 +10,9 @@ cd ~/bourse/docker/analyzer && make fast &&
 cd ~/bourse/docker/dashboard && make fast
 ```
 
-4. Open a terminal and run this command : `cd ~/bourse/docker/analyzer && docker compose up db`
-5. Open a terminal and run this command : `cd ~/bourse/docker/analyzer && docker compose up analyzer`
-6. Open a terminal and run this command : `cd ~/bourse/docker/analyzer && docker compose up dashboard`
+4. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up db`
+5. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up analyzer`
+6. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up dashboard`
 7. Go to the `localhost:8050`
 
 
