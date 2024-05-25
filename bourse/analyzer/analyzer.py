@@ -171,6 +171,7 @@ def day_stock(df):
     del df_day_stock
     gc.collect()
 
+    df_no_volume['cid'] = df_no_volume['symbol'].apply(db.search_company_id)
     return df_no_volume[['date', 'cid', 'open', 'close', 'high', 'low', 'volume']]
 
 def to_stock_format(df):

@@ -28,35 +28,24 @@ companies = companies_df['name'].to_numpy()
 app = dash.Dash(__name__,  title="Bourse", suppress_callback_exceptions=True) # , external_stylesheets=external_stylesheets)
 server = app.server
 app.layout = html.Div([
-        html.H2(
-            f"Welcome to our project",
-            style={"textAlign": "center", "color": "#fff"}  # Couleur du texte blanc
-            ,
-        ),
+        html.H2(f"Welcome to our project", style={"textAlign": "center", "color": "#fff"} ),
         html.Div([
             dcc.RadioItems(
                 id="chandelier",
                 options=[
                     {"label": "Ligne", "value": "Ligne"},
                     {"label": "Chandelier", "value": "Chandelier"},
-                    {"label": "Query", "value": "Query"}
                 ],
-                value="Chandelier",
+                value="Ligne",
                 style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
             ),
-            dcc.Textarea(
-                id='sql-query',
-                value='',
-                style={'width': '100%', 'height': 100},
-            ),
-            html.Button('Execute', id='execute-query', n_clicks=0),
-            html.Div(id='query-result'),
+
             dcc.DatePickerRange(
                 id="date-range",
-                min_date_allowed=pd.to_datetime("2000-01-01"),
+                min_date_allowed=pd.to_datetime("2019-01-01"),
                 max_date_allowed=pd.to_datetime("today"),
                 initial_visible_month=pd.to_datetime("today"),
-                start_date=pd.to_datetime("2000-01-01"),
+                start_date=pd.to_datetime("2020-01-01"),
                 end_date=pd.to_datetime("today"),
                 display_format="YYYY-MM-DD",
                 clearable=True,
@@ -65,29 +54,47 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id="checklist",
                 options=companies,
-                value=companies[:3],
+                value=companies[34:35],
                 multi=True,
                 style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
             ), 
             dcc.Checklist(
                 id="markets",
                 options=["amsterdam", "bruxelle", "paris"],
-                value=['bruxelle'],  
+                value=['bruxelle', "amsterdam", "paris"],  
                 inline=True,
                 style={
                     "flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px", "align-items": "center", "display": "flex", 
                 },
-              
             )
             ],
             style={"display": "flex", "flex-direction": "row", "row-gap": "10px", "column-gap": "10px", "margin-bottom": "20px"}
         ),
         html.Div(id="graphs"),
+        html.Div([
+            html.H2(f"Query:", style={"textAlign": "center", "color": "#fff"} ),
+            html.Div([
+                dcc.Textarea(
+                    id='sql-query',
+                    value='',
+                    style={'width': '100%', 'height': 100},
+                ),
+                html.Button('Execute', id='execute-query', n_clicks=0)],
+                style={"display":"flex", "flex-direction": "row", "gap": "10px" }
+            ),
+            html.Div(
+                id='query-result',
+                style={"background-color": "white", "border-radius": "5px", "padding": "10px" }
+            )],
+            style={"display": "flex", "flex-direction": "column", "row-gap": "10px", "column-gap": "10px", "margin-bottom": "20px", "padding": "20px"}
+        ),
+
+
     ],
     style={
         "background": "linear-gradient(to bottom, #471463, #1f072b)",
         "padding": "20px",  # Remplissage autour du contenu
-        "min-height": "100vh"
+        "min-height": "100vh",
     }
 )
 
@@ -98,31 +105,35 @@ app.layout = html.Div([
                 ddep.Input('markets', 'value'),
                 ddep.Input('date-range', 'start_date'),
                 ddep.Input('date-range', 'end_date'),
-                ddep.Input('execute-query', 'n_clicks')
             ],
             ddep.State('sql-query', 'value')
 )
-
-def update_graph(style, companies, markets, start_date, end_date, n_clicks, query):
+def update_graph(style, companies, markets, start_date, end_date, n_clicks, query = ""):
         graphs = []
         if style == "Chandelier":
+
             for company in companies:
                 if not query:
-                    query = f"""SELECT date, open, close, high, low, volume FROM daystocks ds
-                            JOIN companies c ON ds.cid = c.id
-                            JOIN markets m ON c.mid = m.id
-                            WHERE c.name = '{company}'"""
+                    current_query = f"""SELECT date, open, close, high, low, volume FROM daystocks ds
+                                JOIN companies c ON ds.cid = c.id
+                                JOIN markets m ON c.mid = m.id
+                                WHERE c.name = '{company}'"""
 
                     if markets:
                         markets_condition = "('" + "', '".join(markets) + "')"
-                        query += f" AND m.alias IN {markets_condition}"
+                        current_query += f" AND m.alias IN {markets_condition}"
 
                     if start_date and end_date:
-                        query += f" AND date BETWEEN '{start_date}' AND '{end_date}';"
+                        current_query += f" AND date BETWEEN '{start_date}' AND '{end_date}';"
                     else:
-                        query += ";"
+                        current_query += ";"
+                else:
+                    current_query = query
 
-                df = pd.read_sql_query(query, engine)
+                df = pd.read_sql_query(current_query, engine)
+
+                if df.empty:
+                    logging.info(f"Current query : {current_query}")
 
                 df['date'] = pd.to_datetime(df['date'])
                 df.sort_values(by='date', inplace=True)
@@ -171,8 +182,8 @@ def update_graph(style, companies, markets, start_date, end_date, n_clicks, quer
                     figure={
                         'data': [candlestick] + bollinger_traces,
                         'layout': {
-                            'margin': {'b': 0, 'r': 10, 'l': 60, 't': 0},
                             'legend': {'x': 0},
+                            'title': f'Candlestick - {company}',
                             'xaxis': {'rangeslider': {'visible': True}}
                         }
                     },
@@ -183,28 +194,34 @@ def update_graph(style, companies, markets, start_date, end_date, n_clicks, quer
                     figure={
                         'data': [volume_trace],
                         'layout': {
-                            'margin': {'b': 30, 'r': 10, 'l': 60, 't': 0},
                             'legend': {'x': 0},
+                            'title': f'Volume - {company}',
                             'xaxis': {'rangeslider': {'visible': True}}
                         }
                     },
                 ))
+
         else:
+
+
             for company in companies:
-                if not query:
-                    query = f"""SELECT s.date, s.value, c.name
-                            FROM stocks s
-                            JOIN companies c ON s.cid = c.id
-                            JOIN markets m ON c.mid = m.id
-                            WHERE c.name = '{company}'"""
+                current_query = query if query else f"""SELECT s.date, s.value, c.name
+                        FROM stocks s
+                        JOIN companies c ON s.cid = c.id
+                        JOIN markets m ON c.mid = m.id
+                        WHERE c.name = '{company}'"""
 
-                    if markets:
-                        markets_condition = "('" + "', '".join(markets) + "')"
-                        query += f" AND m.alias IN {markets_condition};"
-                    else:
-                        query += ";"
+                if markets:
+                    markets_condition = "('" + "', '".join(markets) + "')"
+                    current_query += f" AND m.alias IN {markets_condition};"
+                else:
+                    current_query += ";"
 
-                df = pd.read_sql_query(query, engine)
+                df = pd.read_sql_query(current_query, engine)
+
+                if df.empty:
+                    logging.info(f"Current query : {current_query}")
+
                 df['date'] = pd.to_datetime(df['date'])
                 df.sort_values(by='date', inplace=True)
                 fig = px.line(df, x='date', y='value', color='name')
@@ -218,8 +235,25 @@ def update_graph(style, companies, markets, start_date, end_date, n_clicks, quer
                 ))
 
         return graphs
+
+
+
+@app.callback( ddep.Output('query-result', 'children'),
+               ddep.Input('execute-query', 'n_clicks'),
+               ddep.State('sql-query', 'value'),
+             )
+def run_query(n_clicks, query):
+    if n_clicks > 0:
+        try:
+            result_df = pd.read_sql_query(query, engine)
+            return html.Pre(result_df.to_string())
+        except Exception as e:
+            return html.Pre(str(e))
+    return "Enter a query and press execute."
             
 
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
