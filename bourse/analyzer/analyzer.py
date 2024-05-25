@@ -71,9 +71,6 @@ def create_dataframe_from_batch(batch):
     batch_size = len(batch)
 
     for file in batch:
-        if i % 100 == 0 and i != 0:
-            logging.info(f"Progress on batch : {i}/{batch_size}")
-
         for market in markets:
             if market in file:
                 try:
@@ -148,7 +145,7 @@ def rename_companies(df):
     df['name'] = df.groupby('symbol')['name'].transform('last')
     if 'mid' not in df.columns:
         df['mid'] = df['symbol'].apply(symbol_to_id)
-    df['mid'] = df['mid'].astype('Int16')
+    df['mid'] = df['mid'].astype('Int8')
     df.reset_index(drop=True, inplace=True)
     df = df.drop_duplicates(subset=['symbol'], keep='last')
     df.dropna(inplace=True)
@@ -168,13 +165,27 @@ def day_stock(df):
     df_day_stock = grouped.agg(open=('last', 'first'), high=('last', 'max'), low=('last', 'min'), close=('last', 'last'), volume=('volume', 'sum'))
     df_day_stock.reset_index(inplace=True)
     df_day_stock.rename(columns={'level_1': 'date'}, inplace=True)
-    return df_day_stock[['date', 'cid', 'open', 'close', 'high', 'low', 'volume']]
+
+
+    df_no_volume = df_day_stock[df_day_stock['volume'] > 0]
+    del df_day_stock
+    gc.collect()
+
+    return df_no_volume[['date', 'cid', 'open', 'close', 'high', 'low', 'volume']]
 
 def to_stock_format(df):
     df['date'] = df.index.map(lambda date_symbol_tuple: date_symbol_tuple[0])
     df.reset_index(drop=True, inplace=True)
     df['value'] = df['last'].apply(format_last)
-    return df[['date', 'cid', 'value', 'volume']]
+
+
+
+    df_no_volume = df[df['volume'] > 0]
+    del df
+    gc.collect()
+
+
+    return df_no_volume[['date', 'cid', 'value', 'volume']]
 
 
 def is_company_in_db(symbol):
@@ -195,7 +206,6 @@ def process_data(batch, companies):
     del tmp_stocks
     gc.collect()
 
-    logging.info("Creating day stocks")
     day_stocks_df = day_stock(df)
     db.df_write(df=day_stocks_df, table='daystocks', index=False)
     del day_stocks_df
