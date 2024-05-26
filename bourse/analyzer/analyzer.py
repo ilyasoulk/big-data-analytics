@@ -159,10 +159,10 @@ def format_last(x):
         processed_value = x.split('(')[0].replace(' ', '')
         return np.float32(processed_value)  # Split by ( to get rid of the (s) (c) then remove whitespace
 
-def day_stock(df):
+def day_stock(df, companies):
     df['last'] = df['last'].apply(format_last)
     grouped = df.groupby([pd.Grouper(level='symbol'), pd.Grouper(level=0, freq='D')])
-    df_day_stock = grouped.agg(open=('last', 'first'), high=('last', 'max'), low=('last', 'min'), close=('last', 'last'), volume=('volume', 'sum'))
+    df_day_stock = grouped.agg(open=('last', 'first'), high=('last', 'max'), low=('last', 'min'), close=('last', 'last'), volume=('volume', 'sum'), cid=('cid', 'first'))
     df_day_stock.reset_index(inplace=True)
     df_day_stock.rename(columns={'level_1': 'date'}, inplace=True)
 
@@ -171,7 +171,6 @@ def day_stock(df):
     del df_day_stock
     gc.collect()
 
-    df_no_volume['cid'] = df_no_volume['symbol'].apply(db.search_company_id)
     return df_no_volume[['date', 'cid', 'open', 'close', 'high', 'low', 'volume']]
 
 def to_stock_format(df):
@@ -207,7 +206,7 @@ def process_data(batch, companies):
     del tmp_stocks
     gc.collect()
 
-    day_stocks_df = day_stock(df)
+    day_stocks_df = day_stock(df, companies)
     db.df_write(df=day_stocks_df, table='daystocks', index=False)
     del day_stocks_df
     gc.collect()

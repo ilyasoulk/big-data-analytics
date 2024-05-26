@@ -54,7 +54,7 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id="checklist",
                 options=companies,
-                value=companies[34:35],
+                value=companies[:1],
                 multi=True,
                 style={"flex": 1, "background-color": "#d1c4e9", "border-radius": "5px", "padding": "10px"}
             ), 
@@ -131,9 +131,6 @@ def update_graph(style, companies, markets, start_date, end_date, n_clicks, quer
                     current_query = query
 
                 df = pd.read_sql_query(current_query, engine)
-
-                if df.empty:
-                    logging.info(f"Current query : {current_query}")
 
                 df['date'] = pd.to_datetime(df['date'])
                 df.sort_values(by='date', inplace=True)

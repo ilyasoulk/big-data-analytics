@@ -68,9 +68,9 @@ class TimescaleStockMarketModel:
             cursor.execute('''CREATE SEQUENCE company_id_seq START 1;''')
             cursor.execute(
                 '''CREATE TABLE companies (
-                  id SMALLINT PRIMARY KEY DEFAULT nextval('company_id_seq'),
+                  id INTEGER PRIMARY KEY DEFAULT nextval('company_id_seq'),
                   name VARCHAR,
-                  mid SMALLINT,
+                  mid BIGINT,
                   symbol VARCHAR,
                   symbol_nf VARCHAR,
                   isin CHAR(12),
@@ -154,7 +154,6 @@ class TimescaleStockMarketModel:
         :param commit: do a commit after writing
         :param other args: see https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_sql.html
         '''
-        self.logger.debug('df_write')
         df.to_sql(table, self.__engine,
                   if_exists=if_exists, index=index, index_label=index_label,
                   chunksize=chunksize, dtype=dtype, method=self.psql_insert_copy)
