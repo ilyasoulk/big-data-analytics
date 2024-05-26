@@ -12,7 +12,7 @@ cd ~/bourse/docker/dashboard && make fast
 
 4. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up db`
 5. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up analyzer`
-6. If you are on a PC with 16 cores, the waiting time should be around `13 MINUTES`. While waiting, please delete any useless window/terminal (like firefox) to save some memory.
+6. If you are on a PC with 16 cores, the waiting time should be less than`30 MINUTES` (we managed to do it in 13 minutes). While waiting, please delete any useless window/terminal (like firefox) to save some memory.
 7. Open a terminal and run this command : `cd ~/bourse/docker/ && docker compose up dashboard`
 8. Go to the `localhost:8050`
 
@@ -34,7 +34,7 @@ cd ~/bourse/docker/dashboard && make fast
 Note:
 After a discussion with an assistant, we don't really have to verify the outliers because big variation of values is something that is normal in the bourse area
 
-# Strategy to fill the DB in 13 minutes:
+# Strategy to fill the DB in less than 30 minutes (13 min for us):
 
 What have we done in order to do that:
 
@@ -42,3 +42,4 @@ What have we done in order to do that:
 2. We use parallel programming to make it faster
 3. We also do some important cleaning while operating, such as deleting rows where the volume is equal to 0.
 4. We change the encoding of integer columns. For example, df['mid'] = df['mid'].astype('Int8'), here the number is only 8-bits.
+5. We take care of the companies before stock and daystock
